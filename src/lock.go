@@ -35,9 +35,9 @@ import (
 func requireRoot() {
 	if os.Geteuid() != 0 {
 		fmt.Fprintf(os.Stderr, `
-FATAL: This command must be run as Root or Super User (also known as Admin, Administrator, SU, etc.)
-Please try again with 'sudo' infront of the command or as the root user ('su -').
-`)
+		FATAL: This command must be run as Root or Super User (also known as Admin, Administrator, SU, etc.)
+		Please try again with 'sudo' infront of the command or as the root user ('su -').
+		`)
 		os.Exit(1)
 	}
 }

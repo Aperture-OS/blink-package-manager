@@ -37,3 +37,4 @@ src/blink*
 src/blink/*
 *main
 neofetch.json
+build

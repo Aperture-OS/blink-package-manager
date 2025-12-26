@@ -20,23 +20,26 @@
 
 
 APP := main
-SRC := ./
+SRC := ./src
 
 all:
 	echo "Building: testing binary, giant size."
-	CGO_ENABLED=1 go build -trimpath -ldflags="-s -w" -o $(APP) $(SRC)
+	mkdir -p build
+	CGO_ENABLED=1 go build -trimpath -ldflags="-s -w" -o build/$(APP) $(SRC)
 
 release: 
 	echo "Building: production-ready binary."
-	CGO_ENABLED=1 go build -trimpath -ldflags="-s -w" -o $(APP) $(SRC)
+	mkdir -p build
+	CGO_ENABLED=1 go build -trimpath -ldflags="-s -w" -o build/$(APP) $(SRC)
 	echo "Building: optimizing with UPX, really slow."
-	upx --best --ultra-brute $(APP)
+	upx --best --ultra-brute build/$(APP)
 
 static: 
-	go build -o $(APP) $(SRC)
+	mkdir -p build
+	go build -o build/$(APP) $(SRC)
 
 clean:
-	rm -f $(APP)
+	rm -rf build
 
 # i hope whoever is reading this can feel how much fucking time i 
 # spent (over 1.5hours) to fix a bug about reading files and directories and whatnot
