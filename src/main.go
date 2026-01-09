@@ -3,7 +3,7 @@
 	Want to use it for your own project?
 	Blink is completely FOSS (Free and Open Source),
 	edit, publish, use, contribute to Blink however you prefer.
-  Copyright (C) 2025 Aperture OS
+  Copyright (C) 2025-2026 Aperture OS
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,18 +22,17 @@
 package main // main package, entry point
 
 import (
-	"fmt"           // For formatted I/O (printing, formatting strings)
-	"log"           // For logging info, warnings, and errors
-	"os"            // For file and directory operations
-	"path/filepath" // For handling file paths in a cross-platform way
+	"context"		
+	"fmt"           
+	"os"            
+	"path/filepath"
 
-	"github.com/spf13/cobra" // Cobra CLI framework (as u might guess lol)
+	"github.com/charmbracelet/fang" // For fancy terminal output
+	"github.com/spf13/cobra"
+
+	"github.com/Aperture-OS/eyes"
+	"github.com/fatih/color"
 )
-
-
-//===================================================================//
-//							  Functions
-//===================================================================//
 
 /****************************************************/
 // main function - entry point of the Blink package manager
@@ -48,59 +47,83 @@ import (
 // if anyone wanna add them feel free ;)
 func main() {
 
-	log.SetFlags(log.Ltime)         // Log only time, no date as its useless
-	log.SetPrefix("[Blink Debug] ") // Log prefix for debug messages (eg. [Blink Debug] INFO: { ... } )
+	eyes.SetLoggerConfiguration(eyes.LoggerConfiguration{
+		DisplayName:      "BLINK",
+		PrefixTemplate:   "[{display_name}] {timestamp} {log_level}: ",
+		TimestampFormat:  "15:04:05",
+		InfoTextColor:    color.New(color.FgHiBlue),
+		WarnTextColor:    color.New(color.FgHiYellow),
+		SuccessTextColor: color.New(color.FgHiGreen),
+		FatalTextColor:   color.New(color.BgRed, color.Bold, color.FgWhite),
+	})
 
 	// Flags for CLI commands
 	var force bool  // Force re-download or reinstall
 	var path string // Custom cache path
 
-	// Root Cobra command
+	/****************************************************/
+	//  Root command
+	/****************************************************/
 	rootCmd := &cobra.Command{
 		Use:   "blink",
-		Short: "Blink - lightweight, source-based package manager for Aperture OS",
-		Long:  "Blink - lightweight, fast, source-based package manager for Aperture OS and Unix-like systems.",
+		Short: fmt.Sprintf("Blink - lightweight, source-based package manager for %s", distroName),
+		Long:  fmt.Sprintf("Blink - lightweight, fast, source-based package manager for %s and Linux systems.", distroName),
 	}
 
-	//  blink get <pkg>
+	/****************************************************/
+	//  blink get <pkg>		
+	/****************************************************/
 	getCmd := &cobra.Command{
 		Use:     "get <pkg>",
 		Short:   "Download a package recipe (JSON file)",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"d", "download", "g", "dl"},
 		Run: func(cmd *cobra.Command, args []string) {
-			pkgName := args[0]
+
+			requireRoot() // ensure running as root
+
 			if path == "" {
 				path = filepath.Join(defaultCachePath, "recipes")
 			}
-			if err := getpkg(pkgName, path); err != nil {
-				log.Fatalf("Error fetching package: %v", err)
+			for _, pkgName := range args {
+				if err := getpkg(pkgName, path); err != nil {
+					eyes.Errorf("Failed to fetch %s: %v", pkgName, err)
+					return
+				}
 			}
+
 		},
 	}
-	getCmd.Flags().BoolVarP(&force, "force", "f", false, "Force re-download")
-	getCmd.Flags().StringVarP(&path, "path", "p", defaultCachePath, "Specify cache directory")
 
-	//  blink info <pkg>
+	/****************************************************/
+	//  blink search <pkg>	
+	/****************************************************/
 	infoCmd := &cobra.Command{
-		Use:     "info <pkg>",
+		Use:     "search <pkg>",
 		Short:   "Fetch & display package information",
 		Args:    cobra.ExactArgs(1),
-		Aliases: []string{"information", "pkginfo", "details", "fetch"},
+		Aliases: []string{"information", "pkginfo", "details", "fetch", "info", "f", "searchfor"},
 		Run: func(cmd *cobra.Command, args []string) {
-			pkgName := args[0]
+
+			requireRoot() // ensure running as root
+
 			if path == "" {
 				path = filepath.Join(defaultCachePath, "recipes")
 			}
-			if _, err := fetchpkg(path, force, pkgName); err != nil {
-				log.Fatalf("Error reading package info: %v", err)
+
+			for _, pkgName := range args {
+				if _, err := fetchpkg(path, force, pkgName, false); err != nil {
+					eyes.Errorf("Failed to fetch info for %s: %v", pkgName, err)
+					return
+				}
 			}
+
 		},
 	}
-	infoCmd.Flags().BoolVarP(&force, "force", "f", false, "Force re-download")
-	infoCmd.Flags().StringVarP(&path, "path", "p", defaultCachePath, "Specify cache directory")
 
+	/****************************************************/
 	//  blink install <pkg>
+	/****************************************************/
 	installCmd := &cobra.Command{
 		Use:     "install <pkg>",
 		Short:   "Download and install a package",
@@ -110,28 +133,105 @@ func main() {
 
 			requireRoot() // ensure running as root
 
-			pkgName := args[0]
 			if path == "" {
 				path = filepath.Join(defaultCachePath, "recipes")
 			}
-			if err := install(pkgName, force, path); err != nil {
-				log.Fatalf("Error installing package: %v", err)
+
+			for _, pkgName := range args {
+				eyes.Infof("Processing package: %s", pkgName)
+
+				if err := install(pkgName, force, path); err != nil {
+					eyes.Errorf("Failed to install %s: %v", pkgName, err)
+					return
+				}
+			}
+
+		},
+	}
+
+	/****************************************************/
+	//  blink uninstall <pkg>
+	/****************************************************/
+	uninstallCmd := &cobra.Command{
+		Use:     "uninstall <pkg>",
+		Short:   "Download and install a package",
+		Args:    cobra.ExactArgs(1),
+		Aliases: []string{"remove", "u", "uninst"},
+		Run: func(cmd *cobra.Command, args []string) {
+
+			requireRoot() // ensure running as root
+
+			if path == "" {
+				path = filepath.Join(defaultCachePath, "recipes")
+			}
+
+			for _, pkgName := range args {
+				eyes.Infof("Processing package: %s", pkgName)
+
+				if err := uninstall(pkgName, force, path); err != nil {
+					eyes.Errorf("Failed to uninstall %s: %v", pkgName, err)
+					return
+				}
+			}
+
+		},
+	}
+
+	/****************************************************/
+	// Sync command for syncing the package repository
+	/****************************************************/
+	syncCmd := &cobra.Command{
+		Use:     "sync",
+		Short:   "Syncs the package repository to the latest version.",
+		Args:    cobra.NoArgs,
+		Aliases: []string{"s", "--sync", "repo", "reposync"},
+		Run: func(cmd *cobra.Command, args []string) {
+
+			requireRoot() // ensure running as root
+
+			if err := ensureRepo(force); err != nil {
+				eyes.Fatalf("Failed to sync repositories: %v", err)
+			}
+
+		},
+	}
+
+	/****************************************************/
+	// Update command for updating installed packages
+	/****************************************************/
+	updateCmd := &cobra.Command{
+		Use:     "update",
+		Short:   "Update installed packages",
+		Aliases: []string{"upgrade", "up"},
+		Run: func(cmd *cobra.Command, args []string) {
+			requireRoot()
+
+			if path == "" {
+				path = filepath.Join(defaultCachePath, "recipes")
+			}
+
+			if err := updateAll(path); err != nil {
+				eyes.Fatalf("Update failed: %v", err)
 			}
 		},
 	}
-	installCmd.Flags().BoolVarP(&force, "force", "f", false, "Force reinstall")
-	installCmd.Flags().StringVarP(&path, "path", "p", defaultCachePath, "Specify cache directory")
 
-	//  blink support
+	/****************************************************/
+	// Support command for displaying support information
+	/****************************************************/
 	supportCmd := &cobra.Command{
 		Use:     "support",
-		Aliases: []string{"issue", "bug", "contact", "discord", "s", "-s", "--support", "--bug"},
+		Aliases: []string{"issue", "bug", "contact", "discord", "--support", "--bug"},
 		Short:   "Show support information",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("%s", supportPage)
 		},
 	}
 
+	/****************************************************/
+	// Clean command for cleaning the data folders
+	// containing recipes, build directories, etc
+	/****************************************************/
 	cleanCmd := &cobra.Command{
 		Use:     "clean",
 		Aliases: []string{"cleanup", "clear", "c", "-c", "--clean", "--cleanup"},
@@ -144,7 +244,11 @@ func main() {
 		},
 	}
 
-	//  blink version
+	/****************************************************/
+	// Version command for displaying the current version
+	// of Blink. Not using fang for this one because its
+	// better like this.
+	/****************************************************/
 	versionCmd := &cobra.Command{
 		Use:     "version",
 		Aliases: []string{"v", "ver", "--version", "-v"},
@@ -154,13 +258,13 @@ func main() {
 		},
 	}
 
-	// Add commands to root
-	rootCmd.AddCommand(getCmd, infoCmd, installCmd, supportCmd, versionCmd, cleanCmd)
-
 	// Disable default Cobra completion
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
-	//  Shell completion command
+	/****************************************************/
+	// Command for generating shell completion scripts
+	// for bash, zsh, and fish
+	/****************************************************/
 	completionCmd := &cobra.Command{
 		Use:       "completion [bash|zsh|fish]",
 		Short:     "Generate shell completion scripts",
@@ -179,19 +283,32 @@ func main() {
 			}
 		},
 	}
-	rootCmd.AddCommand(completionCmd)
+
+	/****************************************************/
+	// Add flags to commands
+	/****************************************************/
+	
+	getCmd.Flags().BoolVarP(&force, "force", "f", false, "Force re-download")
+	getCmd.Flags().StringVarP(&path, "path", "p", defaultCachePath, "Specify recipes directory")
+	infoCmd.Flags().BoolVarP(&force, "force", "f", false, "Force re-download")
+	infoCmd.Flags().StringVarP(&path, "path", "p", defaultCachePath, "Specify recipes directory")
+	installCmd.Flags().BoolVarP(&force, "force", "f", false, "Force reinstall")
+	installCmd.Flags().StringVarP(&path, "path", "p", defaultCachePath, "Specify recipes directory")
+	uninstallCmd.Flags().BoolVarP(&force, "force", "f", false, "Force uninstall")
+	uninstallCmd.Flags().StringVarP(&path, "path", "p", defaultCachePath, "Specify recipes directory")
+	syncCmd.Flags().BoolVarP(&force, "force", "f", false, "Force re-sync")
+
+	// Add commands to cobra cli root command
+	rootCmd.AddCommand(getCmd, infoCmd, installCmd, supportCmd, versionCmd, cleanCmd, completionCmd, syncCmd, uninstallCmd, updateCmd)
 
 	// Print welcome message
 	fmt.Printf("Blink Package Manager Version: %s\n", Version)
 	fmt.Printf("© Copyright 2025-%d Aperture OS. All rights reserved.\n", currentYear)
 
 	// Execute root command
-	if err := rootCmd.Execute(); err != nil {
-		log.Printf("FATAL: Command Line Interface failed to run. (Is there any syntax error(s)?)\nERR: %v ", err)
-		os.Exit(1)
+	if err := fang.Execute(context.Background(), rootCmd, fang.WithoutVersion()); err != nil {
+		eyes.Fatalf("Command Line Interface failed to run. (Is there any syntax error(s)?)\nERR: %v ", err)
 	}
 }
 
-/********************************************************************************************************/
-
-// if ur reading this pls contribute to the repository if its out :sob:
+// if ur reading this pls contribute to the package repository :sob:

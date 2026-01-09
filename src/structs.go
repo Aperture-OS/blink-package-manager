@@ -3,7 +3,7 @@
 	Want to use it for your own project?
 	Blink is completely FOSS (Free and Open Source),
 	edit, publish, use, contribute to Blink however you prefer.
-  Copyright (C) 2025 Aperture OS
+  Copyright (C) 2025-2026 Aperture OS
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -20,10 +20,6 @@
 */
 
 package main
-
-//===================================================================//
-//							    Structs
-//===================================================================//
 
 /****************************************************/
 // PackageInfo represents the JSON structure of a package recipe
@@ -48,6 +44,7 @@ type PackageInfo struct {
 		Default     string   `json:"default"`     // Default option
 	} `json:"opt_dependencies"`
 	Build struct { // Build instructions
+		Kind      string            `json:"kind"`      // toCompile or preCompiled
 		Env       map[string]string `json:"env"`       // Environment variables for build
 		Prepare   []string          `json:"prepare"`   // Commands to prepare build
 		Install   []string          `json:"install"`   // Commands to install package
@@ -67,8 +64,16 @@ type Manifest struct {
 // InstalledPkg represents a package entry in the manifest
 /****************************************************/
 type InstalledPkg struct {
-	Name        string `json:"name"`
-	Version     string `json:"version"`
-	Release     int64  `json:"release"`
-	InstalledAt int64  `json:"installed_at"`
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	Release int64  `json:"release"`
+}
+
+/****************************************************/
+// RepoConfig represents the structure of the config.toml
+/****************************************************/
+type RepoConfig struct {
+	Name string
+	URL  string
+	Ref  string
 }

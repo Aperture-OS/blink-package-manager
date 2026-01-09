@@ -3,7 +3,7 @@
 	Want to use it for your own project?
 	Blink is completely FOSS (Free and Open Source),
 	edit, publish, use, contribute to Blink however you prefer.
-  Copyright (C) 2025 Aperture OS
+  Copyright (C) 2025-2026 Aperture OS
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -24,12 +24,13 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/Aperture-OS/eyes"
 )
 
 /****************************************************/
@@ -47,7 +48,7 @@ func getSource(url string, isForce bool) error {
 	if _, err := os.Stat(filepath.Join(sourcePath, filepath.Base(url))); os.IsNotExist(err) || isForce { // if recipe does not exist or force is true, download
 
 		if isForce { // if isForce is true, log it (isForce == true is useless because isForce already implies it exists and is true, so we simplify it to just isForce)
-			log.Printf("INFO: Force flag detected, re-downloading source from %s", url)
+			eyes.Infof("Force flag detected, re-downloading source from %s", url)
 		}
 
 		// Perform HTTP GET request
@@ -77,13 +78,11 @@ func getSource(url string, isForce bool) error {
 			return fmt.Errorf("failed to write recipe file: %v", err)
 		}
 	} else {
-		log.Printf("WARNING: Source already exists, skipping download. Use --force or -f to re-download.")
+		eyes.Warnf("Source already exists, skipping download. Use --force or -f to re-download.")
 	}
 
 	return nil
 }
-
-/********************************************************************************************************/
 
 /****************************************************/
 // This takes in a PackageInfo struct and a URL, checks if the source
@@ -94,7 +93,7 @@ func getSource(url string, isForce bool) error {
 
 func decompressSource(pkg PackageInfo, dest string) error {
 
-	log.Printf("INFO: Decompressing source for %s into %s", pkg.Name, dest)
+	eyes.Infof("Decompressing source for %s into %s", pkg.Name, dest)
 
 	srcFile := filepath.Join(sourcePath, filepath.Base(pkg.Source.URL))
 
@@ -125,15 +124,13 @@ func decompressSource(pkg PackageInfo, dest string) error {
 		return fmt.Errorf("unsupported archive format: %s", srcFile)
 	}
 
-	log.Printf("INFO: Running extract command: %v", cmd.Args)
+	eyes.Infof("Running extract command: %v", cmd.Args)
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	return cmd.Run()
 }
-
-/********************************************************************************************************/
 
 /****************************************************/
 // postExtractDir returns the actual build directory inside dest.
@@ -142,7 +139,7 @@ func decompressSource(pkg PackageInfo, dest string) error {
 /****************************************************/
 
 func postExtractDir(extractRoot string) (string, error) {
-	log.Printf("INFO: Scanning extract root %s", extractRoot)
+	eyes.Infof("Scanning extract root %s", extractRoot)
 
 	entries, err := os.ReadDir(extractRoot)
 	if err != nil {
@@ -151,10 +148,43 @@ func postExtractDir(extractRoot string) (string, error) {
 
 	if len(entries) == 1 && entries[0].IsDir() {
 		dir := filepath.Join(extractRoot, entries[0].Name())
-		log.Printf("INFO: Using single top-level dir %s", dir)
+		eyes.Infof("Using single top-level dir %s", dir)
 		return dir, nil
 	}
 
-	log.Printf("INFO: Using extract root as build dir")
+	eyes.Infof("Using extract root as build dir")
 	return extractRoot, nil
+}
+
+/****************************************************/
+// safeExtractToRoot checks the extracted files for path traversal
+// vulnerabilities and returns an error if any are found.
+// It takes in a PackageInfo struct and the extractRoot directory
+// and returns an error if any unsafe paths are found.
+/****************************************************/
+
+func safeExtractToRoot(pkg PackageInfo, extractRoot string) error {
+	// reuse existing extractor
+	if err := decompressSource(pkg, extractRoot); err != nil {
+		return err
+	}
+
+	// walk extracted files and block path traversal
+	return filepath.Walk(extractRoot, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		rel, err := filepath.Rel(extractRoot, path)
+		if err != nil {
+			return err
+		}
+
+		// no absolute paths, no ..
+		if strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
+			return fmt.Errorf("unsafe path detected in binary package: %s", path)
+		}
+
+		return nil
+	})
 }

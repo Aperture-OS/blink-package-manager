@@ -3,7 +3,7 @@
 # Want to use it for your own project?
 #	Blink is completely FOSS (Free and Open Source),
 #	edit, publish, use, contribute to Blink however you prefer.
-#  Copyright (C) 2025 Aperture OS
+#  Copyright (C) 2025-2026 Aperture OS
 
 #  This program is free software: you can redistribute it and/or modify
 #	 it under the terms of the GNU General Public License as published by

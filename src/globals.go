@@ -3,7 +3,7 @@
 	Want to use it for your own project?
 	Blink is completely FOSS (Free and Open Source),
 	edit, publish, use, contribute to Blink however you prefer.
-  Copyright (C) 2025 Aperture OS
+  Copyright (C) 2025-2026 Aperture OS
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -31,36 +31,36 @@ import (
 //							     Globals
 //===================================================================//
 
+// !!! NEVER USE RELATIVE PATHS FOR GLOBALS !!!
+// ALWAYS USE ABSOLUTE PATHS TO AVOID ISSUES
+// EVEN WHEN TESTING LOCALLY, ALWAYS ABSOLUTE PATHS!
+
 var (
-	repoURL = "https://github.com/Aperture-OS/testing-blink-repo/blob/main/pseudoRepo" // Display repo URL
+	distroName = "ApertureOS"
 
-	baseURL = "https://raw.githubusercontent.com/Aperture-OS/testing-blink-repo/refs/heads/main/pseudoRepo/" // Raw JSON base URL for the repository
+	defaultCachePath = "/home/elia/Desktop/ApertureOS/blink/var-blink"      // Default: /var/blink/
+	currentYear      = time.Now().Year()                                    // Current year for copyright
+	Version          = "v0.1.0-alpha"                                       // Blink version
+	lockPath         = filepath.Join(defaultCachePath, "etc", "blink.lock") // Path to lock file
 
-	// TODO: Change to actual repo when releasing blink
-	// TODO: Change to a file instead of variable
+	configPath        = filepath.Join(defaultCachePath, "etc", "config.toml")
+	defaultRepoConfig = `
+[pseudoRepository]
+git_url = "https://github.com/Aperture-OS/testing-blink-repo.git"
+branch = "main"
+`
 
-	defaultCachePath = "./blink/" // Default: /var/blink/
-
-	currentYear = time.Now().Year() // Current year for copyright
-
-	Version = "v0.0.4-alpha" // Blink version
-
-	lockPath = filepath.Join(defaultCachePath, "etc", "blink.lock") // Path to lock file
+	repoCachePath = filepath.Join(defaultCachePath, "repositories")
+	sourcePath    = filepath.Join(defaultCachePath, "sources") // Path to downloaded source
+	recipePath    = filepath.Join(defaultCachePath, "recipes")
+	manifestPath  = filepath.Join(defaultCachePath, "etc", "manifest.toml")
+	buildRoot     = filepath.Join(defaultCachePath, "build")
 
 	supportPage = // Support information string
-
 	`Having trouble? Join our Discord Server or open a GitHub issue.
 	Include any DEBUG INFO logs when reporting issues.
 	Discord: https://discord.com/invite/rx82u93hGD
 	GitHub Issues: https://github.com/Aperture-OS/Blink-Package-Manager/issues`
-
-	sourcePath = filepath.Join(defaultCachePath, "sources") // Path to downloaded source
-
-	recipePath = filepath.Join(defaultCachePath, "recipes")
-
-	manifestPath = filepath.Join(defaultCachePath, "etc", "manifest.json")
-
-	buildRoot = filepath.Join(defaultCachePath, "build")
 
 	versionPage = // Version information string
 	fmt.Sprintf(`Blink Package Manager - Version %s 
