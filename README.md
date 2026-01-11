@@ -25,9 +25,17 @@ Blink is a source-based package manager designed for performance and control. It
 
 Please follow the instructions in [CONTRIBUTING.md](https://github.com/Aperture-OS/blink-package-manager/blob/main/CONTRIBUTING.md) for guidelines on contributing to Blink.
 
+## Contributors ❤️
+
+Thank you to:
+
+<a href="https://github.com/Aperture-OS/blink-package-manager/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Aperture-OS/blink-package-manager" />
+</a>
+
 ### License
 
 Blink is released under Apache 2.0, see more at [LICENSE](https://github.com/Aperture-OS/blink-package-manager/blob/main/LICENSE)
 
 **&copy; Copyright Aperture OS 2025-2026**
-**Must Include the Copyright notice in any fork!**
+**All Rights Reserved!**
