@@ -33,6 +33,8 @@ Thank you to:
   <img src="https://contrib.rocks/image?repo=Aperture-OS/blink-package-manager" />
 </a>
 
+Made with [contrib.rocks](https://contrib.rocks).
+
 ### License
 
 Blink is released under Apache 2.0, see more at [LICENSE](https://github.com/Aperture-OS/blink-package-manager/blob/main/LICENSE)
