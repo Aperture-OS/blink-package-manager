@@ -35,7 +35,7 @@ Thank you to:
 
 Made with [contrib.rocks](https://contrib.rocks).
 
-### License
+## License
 
 Blink is released under Apache 2.0, see more at [LICENSE](https://github.com/Aperture-OS/blink-package-manager/blob/main/LICENSE)
 
